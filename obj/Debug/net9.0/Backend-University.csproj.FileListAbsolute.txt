@@ -140,3 +140,4 @@
 /Users/davide/RiderProjects/Backend-University/Backend-University/bin/Debug/net9.0/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
 /Users/davide/RiderProjects/Backend-University/Backend-University/bin/Debug/net9.0/Microsoft.IdentityModel.Tokens.dll
 /Users/davide/RiderProjects/Backend-University/Backend-University/bin/Debug/net9.0/System.IdentityModel.Tokens.Jwt.dll
+/Users/davide/RiderProjects/Backend-University/Backend-University/obj/Debug/net9.0/Backend-University.sourcelink.json
