@@ -36,6 +36,19 @@ public class StudentController : ControllerBase
             return NotFound();
         return Ok(student);
     }
+    
+    [HttpGet("byEmail")]
+    public async Task<IActionResult> GetByEmail([FromQuery] string email)
+    {
+        var student = await _context.Students
+            .Include(s => s.User)
+            .FirstOrDefaultAsync(s => s.User.Email == email);
+
+        if (student == null)
+            return NotFound();
+
+        return Ok(student);
+    }
 
     [HttpGet("{id}/grades")]
     public async Task<IActionResult> GetStudentGrades(int id)
@@ -51,26 +64,33 @@ public class StudentController : ControllerBase
     [HttpGet("{id}/courses")]
     public async Task<IActionResult> GetStudentCourses(int id)
     {
-        var courses = await _context.Courseenrollments
+            var courses = await _context.Courseenrollments 
             .Where(e => e.Studentid == id)
-            .Include(e => e.Course)
-            .ThenInclude(c => c.Subject)
-            .Include(e => e.Course)
-            .ThenInclude(c => c.Professor)
-            .Select(e => e.Course)
-            .ToListAsync();
-        return Ok(courses);
+                    .Include(e => e.Course)
+                        .ThenInclude(c => c.Subject)
+                    .Include(e => e.Course)
+                        .ThenInclude(c => c.Professor)
+                            .ThenInclude(p => p.User)
+                    .Select(e => e.Course)
+                    .ToListAsync();
+
+            return Ok(courses);
     }
     
     // 5. Esami a cui lo studente è iscritto
     [HttpGet("{id}/examregistrations")]
     public async Task<IActionResult> GetStudentExamRegistrations(int id)
     {
-        var exams = await _context.Examregistrations
-            .Where(r => r.Studentid == id)
-            .Include(r => r.Examsession)
-            .ThenInclude(es => es.Course)
-            .ToListAsync();
+            var exams = await _context.Examregistrations
+                                 .Where(r => r.Studentid == id)
+                    .Include(r => r.Examsession)
+                        .ThenInclude(es => es.Course)
+                            .ThenInclude(c => c.Subject)
+                    .Include(r => r.Examsession)
+                        .ThenInclude(es => es.Course)
+                            .ThenInclude(c => c.Professor)
+                                .ThenInclude(p => p.User)
+                    .ToListAsync();
         return Ok(exams);
     }
     
@@ -211,7 +231,7 @@ public class StudentController : ControllerBase
             .Where(s => grades.Select(g => g.Subject).Contains(s.Name))
             .SumAsync(s => (int?)s.Credits) ?? 0;
 
-        return Ok(new { Media = avg, CFU = cfu });
+        return Ok(new { Media = avg, cfu = cfu });
     }
 
     

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Backend_University.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -33,7 +34,10 @@ builder.Services.AddDbContext<UniversityDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("UniversityDb")));
 
 // Altri servizi (es. Swagger)
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opts =>
+        opts.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles
+    );
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddAutoMapper(typeof(Program));
 
