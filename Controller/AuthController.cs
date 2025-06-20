@@ -23,40 +23,42 @@ public class AuthController : ControllerBase
         _config = config;
     }
 
-    [AllowAnonymous]
     [HttpPost("login")]
+    [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
+        // 1) recupera l’utente SOLO per email
         var user = await _context.Users
             .Include(u => u.Userroles)
-            .ThenInclude(ur => ur.Role)
-            .FirstOrDefaultAsync(u => u.Email == request.Email && u.Passwordhash == request.Password); // Sostituisci con hash reale!
+                .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Email == request.Email);
 
-        if (user == null)
+        // 2) se non esiste o la password NON combacia, -> 401
+        if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Passwordhash))
             return Unauthorized();
 
+        // 3) ruolo principale
         var role = user.Userroles.FirstOrDefault()?.Role?.Rolename ?? "Utente";
 
+        // 4) genera token (come già facevi)
         var claims = new[]
         {
             new Claim(ClaimTypes.Name, user.Email),
             new Claim(ClaimTypes.Role, role)
         };
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+        var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
         var token = new JwtSecurityToken(
             issuer: _config["Jwt:Issuer"],
             audience: _config["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.Now.AddHours(2),
+            expires: DateTime.UtcNow.AddHours(2),
             signingCredentials: creds);
 
         return Ok(new
         {
             token = new JwtSecurityTokenHandler().WriteToken(token),
-            role = role
+            role
         });
     }
 
