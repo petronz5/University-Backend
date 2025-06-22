@@ -109,14 +109,22 @@ public class StudentController : ControllerBase
     [Authorize(Policy = "StudenteOnly")]
     public async Task<IActionResult> GetAvailableExams(int id)
     {
-        var exams = await _context.Examregistrations
+        // tutte le sessioni attive non ancora registrate dallo studente
+        var registeredIds = await _context.Examregistrations
             .Where(r => r.Studentid == id)
-            .Include(r => r.Examsession)
-            .ThenInclude(es => es.Course)
-            .Select(r => r.Examsession)
+            .Select(r => r.Examsessionid)
             .ToListAsync();
+
+        var exams = await _context.Examsessions
+            .Include(es => es.Course)
+                .ThenInclude(c => c.Subject)
+            .Where(es => es.Isactive == true && !registeredIds.Contains(es.Examsessionid))
+            .ToListAsync();
+
         return Ok(exams);
     }
+
+
 
     // 7. Iscrizione lo studente a un esame
     [HttpPost("id/registerexam")]

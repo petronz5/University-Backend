@@ -27,20 +27,20 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        // 1) recupera l’utente SOLO per email
+        // 1) recupera utente
         var user = await _context.Users
             .Include(u => u.Userroles)
                 .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(u => u.Email == request.Email);
 
-        // 2) se non esiste o la password NON combacia, -> 401
+        // 2) verifica password
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Passwordhash))
             return Unauthorized();
 
         // 3) ruolo principale
         var role = user.Userroles.FirstOrDefault()?.Role?.Rolename ?? "Utente";
 
-        // 4) genera token (come già facevi)
+        // 4) genera JWT
         var claims = new[]
         {
             new Claim(ClaimTypes.Name, user.Email),
@@ -55,10 +55,22 @@ public class AuthController : ControllerBase
             expires: DateTime.UtcNow.AddHours(2),
             signingCredentials: creds);
 
+        // ➊ se è Studente, recupera lo StudentId
+        int? studentId = null;
+        if (role == "Studente")
+        {
+            var stud = await _context.Students
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(s => s.Userid == user.Userid);
+            studentId = stud?.Studentid;
+        }
+
+        // 5) ritorna il payload con studentId se esiste
         return Ok(new
         {
-            token = new JwtSecurityTokenHandler().WriteToken(token),
-            role
+            token     = new JwtSecurityTokenHandler().WriteToken(token),
+            role,
+            studentId
         });
     }
 
