@@ -109,25 +109,42 @@ public class StudentController : ControllerBase
     [Authorize(Policy = "StudenteOnly")]
     public async Task<IActionResult> GetAvailableExams(int id)
     {
-        // tutte le sessioni attive non ancora registrate dallo studente
+        // 1) tutti i subject già superati dallo studente
+        var passedSubjects = await _context.Studentgrades
+            .Where(g => g.Studentid == id && g.Grade != null)
+            .Select(g => g.Subject)
+            .ToListAsync();
+
+        // 2) tutti gli esami già registrati
         var registeredIds = await _context.Examregistrations
             .Where(r => r.Studentid == id)
             .Select(r => r.Examsessionid)
             .ToListAsync();
 
+        // 3) il corso di laurea dello studente
+        var degreeCourseId = await _context.Students
+            .Where(s => s.Studentid == id)
+            .Select(s => s.Degreecourseid)
+            .FirstOrDefaultAsync();
+
+        // 4) sessioni attive, non registrate, nel suo corso di laurea e non superate
         var exams = await _context.Examsessions
             .Include(es => es.Course)
                 .ThenInclude(c => c.Subject)
-            .Where(es => es.Isactive == true && !registeredIds.Contains(es.Examsessionid))
+            .Where(es =>
+                es.Isactive == true &&                                // <— forza bool, non bool?
+                !registeredIds.Contains(es.Examsessionid) &&
+                es.Course.Subject.Degreecourseid == degreeCourseId &&
+                !passedSubjects.Contains(es.Course.Subject.Name)
+            )
             .ToListAsync();
 
         return Ok(exams);
     }
 
 
-
     // 7. Iscrizione lo studente a un esame
-    [HttpPost("id/registerexam")]
+    [HttpPost("{id}/registerexam")]
     [Authorize(Policy = "StudenteOnly")]
     public async Task<IActionResult> RegisterExam(int id, [FromBody] int examSessionId)
     {
