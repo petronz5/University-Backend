@@ -48,6 +48,8 @@ public partial class UniversityDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasPostgresExtension("pgcrypto");
+
         modelBuilder.Entity<Availableexam>(entity =>
         {
             entity.ToView("availableexams");
@@ -159,10 +161,6 @@ public partial class UniversityDbContext : DbContext
         modelBuilder.Entity<Userrole>(entity =>
         {
             entity.HasKey(e => e.Userroleid).HasName("userroles_pkey");
-            
-            entity.Property(e => e.Userroleid)
-                .HasColumnName("userroleid")
-                .ValueGeneratedOnAdd();
 
             entity.HasOne(d => d.Role).WithMany(p => p.Userroles)
                 .OnDelete(DeleteBehavior.Cascade)

@@ -43,6 +43,31 @@ public class ProfessorController : ControllerBase
         return Ok(prof);
     }
 
+    [HttpGet("courses/{courseId}/grades")]
+    [Authorize(Policy = "ProfessoreOnly")]
+    public async Task<IActionResult> GetCourseGrades(int courseId)
+    {
+        var email = User.Identity!.Name!;
+        var ok = await _context.Courses
+                    .AnyAsync(c => c.Courseid == courseId &&
+                                    c.Professor.User.Email == email);
+        if (!ok) return Forbid();
+
+        var list = await _context.Examregistrations
+            .Where(r => r.Examsession.Courseid == courseId && r.Grade != null)
+            .Include(r => r.Student).ThenInclude(s => s.User)
+            .Select(r => new {
+                r.Studentid,
+                r.Student.User.Firstname,
+                r.Student.User.Lastname,
+                r.Grade,
+                r.Examsession.Examdate
+            })
+            .ToListAsync();
+
+        return Ok(list);
+    }
+
     [HttpGet("registrations/pending")]
     [Authorize(Policy = "ProfessoreOnly")]
     public async Task<IActionResult> GetPendingRegistrations()

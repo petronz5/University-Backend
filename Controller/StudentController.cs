@@ -250,7 +250,7 @@ public class StudentController : ControllerBase
         {
             Studentid = id,
             Courseid = courseid,
-            Enrollmentdate = DateTime.UtcNow
+            Enrollmentdate = DateTime.Now
         };
         _context.Courseenrollments.Add(enrollment);
         await _context.SaveChangesAsync();
@@ -279,6 +279,24 @@ public class StudentController : ControllerBase
 
         return Ok(student.Degreecourse);
     }
+
+    // GET api/student/{id}/grade-analytics
+    [HttpGet("{id}/grade-analytics")]
+    [Authorize(Policy = "StudenteOnly")]
+    public async Task<IActionResult> GetGradeAnalytics(int id)
+    {
+        var stats = await _context.Studentgrades
+                    .Where(g => g.Studentid == id && g.Grade != null)
+                    .GroupBy(g => g.Subject)
+                    .Select(g => new {
+                        Subject = g.Key,
+                        Avg     = g.Average(x => x.Grade)
+                    })
+                    .ToListAsync();
+
+        return Ok(stats);
+    }
+
 
     [HttpPost]
     [Authorize(Policy = "RettoreOnly")]
